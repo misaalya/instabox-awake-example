@@ -9,10 +9,27 @@ mau dibangunkan. Jadi jalankan di laptop, VPS kecil, atau Raspberry Pi —
 selama mesin itu hidup dan punya CLI `instabox` yang sudah login.
 
 ```
-[ browser ] → [ wake-box di laptop/VPS ] → `instabox start <id>` → sandbox nyala
+[ browser ] → [ wake-box di laptop/VPS ] → `instabox wake <id>` → sandbox nyala
                         ↓
                   polling URL sampai 200
 ```
+
+## Pasang CLI-nya dulu
+
+Butuh **Node.js ≥ 18.17**:
+
+```bash
+npx instabox@latest
+```
+
+Itu sekaligus sign in (device code), memasang CLI, dan agent skills. Atau
+langsung global:
+
+```bash
+npm install -g instabox
+```
+
+Cek: `instabox whoami`
 
 ## Pakai
 
@@ -21,7 +38,6 @@ cd wake-box
 
 MACHINE_ID=<machine-id> \
 TARGET_URL=https://3000-<machine-id>.instabox.tech \
-WAKE_CMD="instabox start <machine-id>" \
 node server.js
 ```
 
@@ -29,21 +45,19 @@ Buka <http://127.0.0.1:4000> lalu klik **Bangunkan sandbox**.
 
 ### Cek dulu perintah wake-nya
 
-`WAKE_CMD` sengaja dibuat bebas, karena nama subcommand-nya belum tentu
-`start`. Cek dulu di mesinmu:
+`WAKE_CMD` sengaja dibuat bebas. Default-nya:
 
 ```bash
-instabox --help
+instabox wake <machine-id> || instabox resume <machine-id>
 ```
 
-Kalau ternyata tidak ada `start`, kemungkinan opsi lain:
+- `instabox wake` — untuk sandbox yang **pause sendiri** karena idle; menunggu sampai jalan (maks 45s)
+- `instabox resume` — untuk sandbox yang kamu **pause/stop manual** (wake sengaja tidak membangunkan yang ini)
 
-- `instabox resume <id>`
-- `instabox up <id>`
-- `instabox ssh <id>` (sering otomatis membangunkan, tapi ini interaktif/blokir)
+Bisa juga pakai nama sandbox daripada ID, misalnya `instabox wake box-f1cbdc`.
 
 Karena `WAKE_CMD` dijalankan lewat shell, kamu bisa merangkai apa saja,
-misalnya `WAKE_CMD="instabox start m_xxx && echo woke"`.
+misalnya `WAKE_CMD="instabox resume m_xxx && echo woke"`.
 
 ## Environment variable
 
@@ -52,7 +66,7 @@ misalnya `WAKE_CMD="instabox start m_xxx && echo woke"`.
 | `PORT` | `4000` | port HTTP |
 | `HOST` | `127.0.0.1` | bind address; pakai `0.0.0.0` kalau di VPS |
 | `MACHINE_ID` | — | dipakai kalau `WAKE_CMD` tidak diset |
-| `WAKE_CMD` | `instabox start <MACHINE_ID>` | perintah untuk bangunkan |
+| `WAKE_CMD` | `instabox wake || instabox resume <MACHINE_ID>` | perintah untuk bangunkan |
 | `TARGET_URL` | — | URL yang di-poll sampai menjawab 200 |
 | `TIMEOUT_MS` | `120000` | batas tunggu total |
 | `INTERVAL_MS` | `2000` | jeda antar-poll |

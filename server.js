@@ -6,7 +6,7 @@
 //   PORT=4000 \
 //   MACHINE_ID=<machine-id> \
 //   TARGET_URL=https://3000-<machine-id>.instabox.tech \
-//   WAKE_CMD="instabox start <machine-id>" \
+//   WAKE_CMD="instabox wake <machine-id>" \
 //   node server.js
 //
 // Lalu buka http://127.0.0.1:4000
@@ -22,8 +22,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = Number(process.env.PORT ?? 4000)
 const HOST = process.env.HOST ?? '127.0.0.1'
 const MACHINE_ID = process.env.MACHINE_ID ?? ''
-// Perintah untuk membangunkan sandbox. Ganti sesuai output `instabox --help`.
-const WAKE_CMD = process.env.WAKE_CMD ?? (MACHINE_ID ? `instabox start ${MACHINE_ID}` : '')
+// Perintah untuk membangunkan sandbox. `wake` menangani sandbox yang
+// pause sendiri karena idle (menunggu sampai jalan, maks 45s); `resume`
+// menangani yang di-pause/stop manual.
+const WAKE_CMD =
+  process.env.WAKE_CMD ??
+  (MACHINE_ID ? `instabox wake ${MACHINE_ID} || instabox resume ${MACHINE_ID}` : '')
 // URL yang dipakai untuk mengecek "apakah server sudah hidup".
 const TARGET_URL = process.env.TARGET_URL ?? ''
 const TIMEOUT_MS = Number(process.env.TIMEOUT_MS ?? 120_000)
