@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>wake-box</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(50rem 25rem at 20% 0%, #1c2740, transparent 60%), #0b0d12;
+        color: #e8ecf4;
+        padding: 1.5rem;
+      }
+      main {
+        width: min(46rem, 100%);
+        display: grid;
+        gap: 1rem;
+      }
+      h1 { margin: 0; font-size: 1.9rem; letter-spacing: -0.02em; }
+      p.lede { margin: 0; color: #8f9bb3; line-height: 1.6; }
+      .row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+      button {
+        font: inherit;
+        font-weight: 650;
+        color: #0b0d12;
+        background: #ffc447;
+        border: 0;
+        border-radius: 0.6rem;
+        padding: 0.7rem 1.2rem;
+        cursor: pointer;
+      }
+      button:disabled { filter: grayscale(1) brightness(0.7); cursor: progress; }
+      .pill {
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+        border-radius: 999px;
+        border: 1px solid #242a3a;
+        color: #8f9bb3;
+      }
+      .pill.up { color: #3ddc97; border-color: #3ddc9755; background: #3ddc9712; }
+      .pill.down { color: #ff7b72; border-color: #ff7b7255; background: #ff7b7212; }
+      pre {
+        margin: 0;
+        padding: 0.9rem 1rem;
+        min-height: 12rem;
+        max-height: 22rem;
+        overflow: auto;
+        background: #090b10;
+        border: 1px solid #242a3a;
+        border-radius: 0.75rem;
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 0.8rem;
+        line-height: 1.6;
+        color: #b9c4d8;
+        white-space: pre-wrap;
+      }
+      code { font-family: ui-monospace, Menlo, monospace; background: #ffffff0d; padding: 0.1rem 0.3rem; border-radius: 0.3rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Wake the box</h1>
+      <p class="lede">
+        Tombol ini menjalankan CLI <code>instabox</code> di mesin ini, lalu
+        menunggu sampai URL target menjawab. App ini harus jalan di luar
+        sandbox — laptop atau VPS.
+      </p>
+
+      <div class="row">
+        <button id="go" type="button">Bangunkan sandbox</button>
+        <span class="pill" id="state">mengecek…</span>
+        <span class="pill" id="cfg">config…</span>
+      </div>
+
+      <pre id="log">siap.</pre>
+    </main>
+
+    <script>
+      const $ = (s) => document.querySelector(s)
+      const log = (msg) => { $('#log').textContent += `\n${msg}` }
+
+      async function status() {
+        try {
+          const r = await fetch('/status', { cache: 'no-store' })
+          const s = await r.json()
+          const up = s.ok
+          $('#state').textContent = up ? `online · ${s.status} · ${s.ms}ms` : `offline${s.error ? ` · ${s.error}` : ''}`
+          $('#state').className = `pill ${up ? 'up' : 'down'}`
+        } catch {
+          $('#state').textContent = 'tidak bisa cek'
+          $('#state').className = 'pill down'
+        }
+      }
+
+      async function config() {
+        const r = await fetch('/config')
+        const c = await r.json()
+        $('#cfg').textContent = c.machineId || 'MACHINE_ID kosong'
+        if (!c.wakeCommand) log('PERINGATAN: WAKE_CMD belum diset')
+      }
+
+      $('#go').addEventListener('click', async () => {
+        const btn = $('#go')
+        btn.disabled = true
+        $('#log').textContent = 'menjalankan perintah…'
+        try {
+          const r = await fetch('/wake', { method: 'POST' })
+          const body = await r.json()
+          if (body.alreadyUp) {
+            log(`sudah hidup · ${body.probe.status} dalam ${body.probe.ms}ms`)
+          } else {
+            log(`$ ${body.command.command}`)
+            if (body.command.stdout) log(body.command.stdout)
+            if (body.command.stderr) log(`stderr: ${body.command.stderr}`)
+            log(`exit ${body.command.exitCode} · ${body.command.tookMs}ms`)
+            log(`cek ${body.wake.checks.length}x: ${body.wake.checks.map((c) => (c.ok ? 'UP' : c.error || c.status)).join(' → ')}`)
+            log(body.wake.woke ? 'SELESAI: sandbox hidup.' : 'GAGAL: masih offline sampai timeout.')
+          }
+        } catch (err) {
+          log(`error: ${err}`)
+        } finally {
+          btn.disabled = false
+          status()
+        }
+      })
+
+      config()
+      status()
+      setInterval(status, 5000)
+    </script>
+  </body>
+</html>
